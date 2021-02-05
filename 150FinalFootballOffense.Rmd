@@ -1,0 +1,216 @@
+---
+title: "NFL Data Project: Offense"
+output: html_document
+---
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+NFLdata <-read.csv("NFL_Data_1950_to_2019V3.csv")
+
+#we only focus on 1st round and offensive positions
+NFLOffenseDataRound1 <- NFLdata %>%
+  filter(Rnd == 1) %>%
+  filter(Pos == "B" | Pos == "RB" | Pos == "HB"| Pos == "FB"| Pos == "WR" |Pos == "SE" | Pos == "TE" | Pos == "E" | Pos == "FL" | Pos == "T" | Pos == "G"  | Pos == "C" | Pos == "QB")
+summary(as.factor(NFLOffenseDataRound1$Pos))
+
+```
+
+## PART A:
+
+# Q1:
+
+Our dataset looks at the different career statistics from offensive players drafted to the NFL in the first round from 2019 dating back to 1950. A lot of the data from the dataset is about what offensive players have done in their careers, while other parts are information that is known when the player is drafted. We would like to analyze some factors are that seem to relate first to round picks succeeding after they get drafted to the NFL, and how they may help predict offensive players' individual performances. As fans, we'd like to get a better understanding of how we should feel/what we can expect on average from offensive players that teams draft in the first round (based on information we have right when they are drafted).
+
+
+# Q2:
+
+The numerical response variable that we chose is Weighted Career Approximate Value (CarAV in our dataset, or later CarAV2). Approximate Value is a metric created by pro-football-reference that attempts to quantify the approximate value that players provide their teams regardless of position (for example, WRs would look at yards, TDs, etc. while QBs would look at passing yards, rushing yards, passing tds, rushing TDs etc. and the stat allows us to see the values that these players provided and compare to each other). Weighted Career Approximate Value (CarAV) tells the weighted sum of seasonal AV scores across a player's career, weighing their best years higher, and then decreasing in weight for worse years. We chose this response variable because it attempts to provide an objective way of comparing the value/success of offensive players in their career across positions.
+
+```{r}
+summary(NFLOffenseDataRound1$CarAV)
+sd(NFLOffenseDataRound1$CarAV, na.rm = T)
+
+ggplot(NFLOffenseDataRound1, aes(CarAV))+ geom_bar() + labs(title = "Frequency of CarAV")
+```
+
+# Q3:
+Although there are a few outliers who have very high Weighted Career Approximate Value (CarAV), we think it will be important to still include this data because we would like to know where these extremely successful offensive players get drafted/at what position they play, and the data should take into account the potential for greatness like this.
+
+Also, looking at the CSV file shows that up until 1955, most players in the first round had CarAVs of 0 despite having career numbers that should (and in  other years would) lead to a higher than 0 value, leading us to believe that this data is only trustworthy from 1955 onward (perhaps they haven't gotten that far back in time yet). For this reason we are assigning an NA to all offensive players in these years (1950 to 1955) for CarAV.
+
+Finally, we will remove any player that is still currently in the league because we would be unfairly cutting their CarAV short if we only looked at it up to 2019. (The dataset has the year that players have played to. If they had retired in 2019 it would stop at 2019. Anyone with "To: 2020" is still playing this season and has not retired yet.)
+
+```{r}
+NFLOffenseDataRound1$CarAV2 <- NFLOffenseDataRound1$CarAV
+
+NFLOffenseDataRound1$CarAV2[NFLOffenseDataRound1$Draft.Year < 1955 | NFLOffenseDataRound1$To == 2020] <- NA
+summary(NFLOffenseDataRound1$CarAV2) #just checking it worked and added carAV2
+```
+
+# Q4:
+
+We are choosing pick number in the first round to be the primary explanatory variable. We want to see how being picked earlier or later in the first round correlates with Weighted Career Approximate Value. We expect that of all the variables we check, this one will pretty much always hold true because better players (players that teams thought would be better) will probably be drafted first, for any way we break up the data.
+
+```{r}
+summary(NFLOffenseDataRound1$Pick)
+
+ggplot(NFLOffenseDataRound1, aes(Pick))+ geom_bar() + labs(title = "Frequency of Offensive Player Picks in First Round")
+```
+
+# Q5:
+There are no unusual observations here. As more teams were added to the league, more picks have been added to the draft, so there are naturally less later picks. This should have no effect on the rest of the data in CarAV2. At some picks there were also just fewer offensive players than others, but this trend also should not effect any data we have. 
+
+# Q6:
+We predict that offensive players who were drafted earlier in the first round will tend to be more successful/have higher CarAVs (have higher Weighted Career Approximate Values) than those drafted later in the first round. We expect NFL teams to pick who they think is the best player for their team earlier on in the draft, and we expect that they will be correct many times. But we don't think that all players will follow this trend because there many busts and many players who over-perform what they were predicted to do by teams and scouts. Seeing the relationship between these variables will tell us if higher picks in the first round really do correlate to more successful offensive players, and how big of a dropoff there may be.
+
+# Q7:
+```{r}
+
+ggplot(NFLOffenseDataRound1, aes(x= as.factor(Pick),  y=CarAV2 )) + geom_boxplot() + labs( x= "Pick Number", y = "CarAV", title = "Weighted Career Approximate Value by Pick in First Round")
+
+```
+
+# Q8:
+There seems to be a general trend where offensive players selected earlier in the first round tend to have higher CarAVs on average. This general trend matched our original expectations. One interesting observation is that the first overall pick had by far the greatest ceiling, and it doesn't appear to be much of an outlier at that pick (as it was still in the box-whisker plot, especially compared to the outlier at 9th, for example). Another interesting observation is that the first 2 picks seem to have about the same average CarAV but then a drop-off. It was also a bit surprising that there was not as dramatic a decrease as we expected over the round. In retrospect this makes sense because these were all first round picks after all. There are also small ups and downs in the trend (for example, the 24th pick having a higher average CarAV than the 22nd) which are a little suprising, but that seems to just be random variance, as it does not make sense for that to be the case in this scenario. 
+
+Going back to our original question, it seems fair to say that as fans, we should have higher expectations of offensive players who are picked earlier in the first round (especially in the top 2), because earlier pick in the first rounds correlates with higher CarAV.
+
+-------------------------------------------------------------------------------
+
+## PART B
+
+# Q1:
+
+The second variable we are choosing is position. We would like to know if certain positions tend to be more successful (have a higher CarAV) than others. We are picking this because we think that there may be some positions that the NFL teams are better at evaluating than other positions (which would result in those positions having higher average CarAVs), which would then make the expectations of first rounders drafted at these positions (that they are better at evaluating/have higher CarAVs) higher than others. 
+
+# Q2:
+
+```{r}
+#Using the two explanatory variables, provide a summary table of the outcome using group_by(), arrange(), and summarize() functions
+
+NFLOffenseDataRound1 %>%
+  group_by(Pick, Pos) %>%
+  summarise(avg = mean(CarAV2, na.rm=T)) %>%
+  arrange(avg) %>%
+  tbl_df() %>%
+  print(n=Inf)
+
+```
+
+# Q3:
+```{r}
+
+ggplot(NFLOffenseDataRound1, aes(x= Pick,  y=CarAV2 )) + geom_point(aes(color = Pos)) + labs( title = "CarAV by Pick in First Round and Position ")
+
+ggplot(NFLOffenseDataRound1, aes(x= Pick,  y=CarAV2 ),aes(color = Pos)) + geom_point() + labs( title = "CarAV by Pick in First Round and Position Trendline") + geom_smooth(aes(color=Pos), method = "lm", se = F)
+
+ggplot(NFLOffenseDataRound1, aes(x= Pick,  y=CarAV2)) + geom_point(aes(color = Pos)) + facet_wrap(~Pos) + geom_smooth(method = "lm", se = F) + labs(title = "CarAV by Pick in First Round and Position ")
+
+```
+
+# Q4:
+This plot is different because we colored the points by position (and we used points instead of a boxplot. And in the second one we included trendlines for each position, and  in the third we did a facet wrap to see a graph for each position). Our expectation was that certain positions would have higher Career AV than others. It is hard to see if this is the case in the first plot,  especially because it is so chaotic with so many different positions. It looks like there  may  be some trends, but they are hard to decipher.
+
+If we look at trendlines instead, it is a bit more digestible (but still difficult). The fact that many of the lines have the same/very similar downward slopes reveals that the trend we found in part A about picks and CarAV holds true for a lot of these positions. The fact that some of these lines are higher than others (but with the same slope) shows that some positions tend to be more successful than others. The data is honestly still too cluttered to see specifics about all positions, and there are lines from positions without many people drafted to them in the first round that are probably off due to the small amount of data available for them.
+
+In the third graph/set of graphs, we get a better understanding of the trendlines that we saw in graph two. Here we can  clearly see that there is more data for certain positions than others (which is where the odd looking trendlines came from). Interestingly, we can also see that certain positions seem to have steeper drop offs at later picks (meaning that pick is more influential on predicting CarAV). For example, TE and C seem unusually flatter compared to other positions. 
+
+# Q5:
+```{r}
+ggplot(NFLOffenseDataRound1, aes(Pos))+ geom_bar() + labs(title = "Frequency of Positions")
+#just here to see the distribution of positions
+```
+
+Looking at the distribution is very revealing. 
+
+The dataset had many overly descriptive position titles for certain offensive players, which is why certain positions exist with such few players. This leads to a cluttered graph when we add in position as a variable, and the small number of datapoints for these positions make it hard to make accurate claims about them (and some have odd trendlines due to lack of data). Many of these positions are comparable to one another and can be grouped together for clarity (grouped together based on groupings on Pro-Football-Reference website, the site that all this dataset was scraped from). Because certain positions are so similar to others (in real life football that is), we decided to group them together rather than throw certain ones out and get rid of relevant data. 
+
+```{r}
+#step 1, new variable
+NFLOffenseDataRound1$PosCat <- NFLOffenseDataRound1$Pos
+
+#Groups Running Backs (RBs)
+NFLOffenseDataRound1$PosCat[NFLOffenseDataRound1$Pos == "B" | NFLOffenseDataRound1$Pos == "RB" | NFLOffenseDataRound1$Pos == "FB" | NFLOffenseDataRound1$Pos == "HB"  ] <- "RBs"
+
+#Group Receivers
+NFLOffenseDataRound1$PosCat[NFLOffenseDataRound1$Pos == "WR" | NFLOffenseDataRound1$Pos == "SE" | NFLOffenseDataRound1$Pos == "FL"  ] <- "Receivers"
+
+#Group Tight Ends + extra (TEs)
+NFLOffenseDataRound1$PosCat[NFLOffenseDataRound1$Pos == "TE" | NFLOffenseDataRound1$Pos == "E"] <- "TEs"
+
+# Group O-Line
+NFLOffenseDataRound1$PosCat[NFLOffenseDataRound1$Pos == "G" | NFLOffenseDataRound1$Pos == "C" | NFLOffenseDataRound1$Pos == "T"  ] <- "O-Line"
+
+summary(as.factor(NFLOffenseDataRound1$PosCat))
+```
+
+We group B, RB, HB  and FB  into "RBs". 
+We group WR,FL and SE into "Receivers". 
+We group TE and E into "TEs"
+We group T, G, and C into "O-line" (offensive line).
+QB is its own category
+
+We kept TEs seperate from WRs because they block a lot more, but at the same time cannot be grouped in with Offensive Lineman. We felt comfortable with the around 60 datapoints. We grouped in E (end) with TE because they are very similar, while SE (split end) and FL (flanker) are more comparable to receivers.
+
+This will all help our graph look much cleaner and it will also help us make more accurate conclusions about drafting position groupings as a whole.
+
+# Q6:
+```{r}
+ggplot(NFLOffenseDataRound1, aes(x= Pick,  y=CarAV2)) + geom_point(aes(color = PosCat)) + labs( title = "CarAV by Pick in First Round and Position Category") + guides(color=guide_legend(title = "Position Category")) + geom_smooth(aes(color= PosCat, na.rm=TRUE), method = "lm", se = F)
+
+ggplot(NFLOffenseDataRound1, aes(x= Pick,  y=CarAV2)) + geom_point(aes(color = PosCat)) + facet_wrap(~PosCat) + geom_smooth(method = "lm", se = F) + guides(color=guide_legend(title = "Position Category")) + labs(title = "CarAV by Pick in First Round and Position Category")
+
+summary(as.factor(NFLOffenseDataRound1$PosCat))
+
+```
+
+These plots are different because they use the position categories that we made instead of just positions. The smaller amount of categories allows us to put trendlines on the graph without it appearing too cluttered to understand (as opposed to needing two graphs like before). The facet wrapped graphs are also much more visible and digestible. 
+
+For looking at trends, the trendlines show us that all the position groups (excluding TE) seem to follow the correlation that we found in part A between higher draft picks and higher CarAV. This graph also makes it clearer that teams are better at drafting  certain positions in the first round. Since in theory all positions should be about even in CarAV, the fact that some are higher than others in the first round tells us the teams are better at drafting offensive players at these positions. For example, Offensive Lineman seem to have higher CarAVs on average than RBs, implying that teams are better at picking offensive lineman than RBs. In other words, as a fan, we can expect that drafting an offensive lineman in the first round will return more value for our team on average than a WR in the first round.
+
+TEs seem to be unique in how they don't seem to follow the trend of earlier picks correlating to a higher CarAV. In fact, the line seems to stay fairly flat. They provide the lowest CarAV on average in the earlier picks, but by the end of the round they actually provide higher CarAV on average than some other positions.
+
+It is nice to see the data separated in the facet wrapped graphs so we can see the trends more clearly across positions. One interesting observation is that there are a lot of QBs taken earlier on, and far less taken later in the first round compared to other positions. It does look nice though :)
+
+# Q7:
+We are going to replace the variable of position with the variable of age. We chose this variable because we wanted to see if and how age when drafted affects the CarAV of players. We think that players who were drafted younger will have higher CarAVs because they are likely to be more talented to come to the NFL at a younger age and may also be more likely to have longer careers as well.
+
+In the facet wrap graphs we will also include colors for position, but wrapping by age and by position would result in an overwhelming amount of graphs with not as many datapoints on each one for many of them. We want to include colors for position here to see if there are any trends we see by age in each position. But if nothing jumps out we think it may be a bit beyond the scope of the question to keep digging further into that when we could still come away with relevant data about age in general.
+
+# Q8:
+```{r}
+#get rid of ages without much  data in them
+summary(as.factor(NFLOffenseDataRound1$Age))
+
+#there are only 7 20's, 27 24's, 9 25's, 2 26's, 2 28's, and 1 30, so we will get rid of those years as they are outliers/don't have enough data
+
+NFLOffenseDataRound1$Age2 <- NFLOffenseDataRound1$Age
+NFLOffenseDataRound1$Age2[NFLOffenseDataRound1$Age == 20 | NFLOffenseDataRound1$Age > 23 ] <- NA
+summary(as.factor(NFLOffenseDataRound1$Age2)) #just chekcing
+
+NFLOffenseDataRound1 %>%
+  group_by(Pick, Age2) %>%
+  summarise(avg = mean(CarAV2, na.rm=T)) %>%
+  arrange(avg) %>%
+  tbl_df() %>%
+  print(n=Inf)
+
+ggplot(NFLOffenseDataRound1, aes(x= Pick,  y=CarAV2)) + geom_point(aes(color = as.factor(Age2), shape = PosCat)) + labs(title = "CarAV by Pick in First Round and Age") + guides(color=guide_legend(title = "Age"))  + geom_smooth(aes(color= as.factor(Age2)), method = "lm", se = F)
+
+ggplot(NFLOffenseDataRound1, aes(x= Pick,  y=CarAV2)) + geom_point(aes(color = PosCat)) + facet_wrap(~Age2) + geom_smooth(method = "lm", se = F) + guides(color=guide_legend(title = "Position Category")) + labs(title = "CarAV by Pick in First Round and Age and Position Category")
+
+
+```
+
+This first plot is different from the previous because it looks at age and position (with trendlines only for age). In looking at the most common ages (21, 22 and 23, we threw out the rest) it seems that offensive players who are drafted younger do tend to have higher CarAV (except for where the 23 years olds' trend line briefly passes above the 22 years olds' after around pick 22). But it also looks like the biggest differences in age (like 21 to 23) are a bit smaller than the biggest differences of certain positions that were far apart (like Oline and WR). 
+
+No real observations about position and age can be drawn from our third graph, but it does a good job of showing how we got the trendlines in graph 2. It also shows us how 22 is the most popular age for first round draft picks.
+
+# Q9:
+We learned a lot from this dataset. First, in part A we learned that offensive players drafted earlier in the first round tend to have higher CarAVs than offensive players drafted later in the first round. We also learned that certain positions (like Olineman) tend to have higher CarAVs than others (like RBs and WRs), and every position still seemed to follow the trend from part A (that offensive players drafted earlier tended to have higher CarAVs on average) other than TEs who remained fairly constant with their average CarAV regardless of where they were drafted in the first round. Finally, we learned that age is also an important factor to take into account. Generally, offensive players drafted at younger ages tended to have higher CarAVs on average than those drafted at older ages (at least for the commonly drafted ages of 21-23), and age also followed the same trend from part A.
+
+Coming in, we wanted to learn how various factors about players drafted in the first round can help us predict the performances of these offensive players over their career on average, or at least as fans know what we can expect from first round picks that our teams make. Based on this data, I would have fairly high expectations if my team were to draft a young offensive lineman early in the draft on average (looking at you Penei Sewell). 
+
